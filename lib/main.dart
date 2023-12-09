@@ -71,11 +71,12 @@ class MemosScreen extends StatelessWidget {
                   suffixIcon: IconButton(
                       onPressed: () async {
                         String body = _noteController.text;
-                        if (body.isNotEmpty) {
-                          NoteManager manager = context.read<NoteManager>();
-                          await manager.addNote(body);
-                          _noteController.clear();
+                        if (body.isEmpty) {
+                          return;
                         }
+                        NoteManager manager = context.read<NoteManager>();
+                        await manager.addNote(body);
+                        _noteController.clear();
                       },
                       icon: const Icon(Icons.arrow_circle_right)),
                 ),

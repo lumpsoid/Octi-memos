@@ -4,12 +4,26 @@ import 'note_manager.dart';
 import 'note.dart' show Note;
 import 'package:flutter/material.dart';
 
-class NoteCard extends StatelessWidget {
+class NoteCard extends StatefulWidget {
   final int index;
   final Note note;
   final int id;
 
   NoteCard({required this.note, required this.index, super.key}) : id = note.id;
+
+  @override
+  NoteCardState createState() => NoteCardState();
+}
+
+class NoteCardState extends State<NoteCard> {
+  late TextEditingController _controller;
+  bool _isEditing = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = TextEditingController(text: widget.note.body);
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -30,7 +44,9 @@ class NoteCard extends StatelessWidget {
         ),
         confirmDismiss: (DismissDirection direction) async {
           if (direction == DismissDirection.startToEnd) {
-            await _showEditDialog(context, index);
+            setState(() {
+              _isEditing = true;
+            });
             return false;
           }
           // delete
@@ -41,7 +57,8 @@ class NoteCard extends StatelessWidget {
         },
         onDismissed: (DismissDirection direction) async {
           String action = '';
-          NoteManager manager = Provider.of<NoteManager>(context, listen: false);
+          NoteManager manager =
+              Provider.of<NoteManager>(context, listen: false);
           // edit
           // if (direction == DismissDirection.startToEnd) {
           //   action = 'edited';
@@ -49,30 +66,50 @@ class NoteCard extends StatelessWidget {
           // }
           // delete
           if (direction == DismissDirection.endToStart) {
-            await manager.deleteNote(index);
+            await manager.deleteNote(widget.index);
             action = 'deleted';
           }
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text("Memo was $action", style: const TextStyle(fontSize: 16.0)),
-              duration: const Duration(seconds: 2),
-            )
-          );
+          ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+            content: Text("Memo was $action",
+                style: const TextStyle(fontSize: 16.0)),
+            duration: const Duration(seconds: 2),
+          ));
         },
-        key: Key(id.toString()),
+        key: Key(widget.id.toString()),
         child: Container(
           margin: const EdgeInsets.symmetric(vertical: 5.0, horizontal: 16.0),
           padding: const EdgeInsets.symmetric(vertical: 10.0, horizontal: 15.0),
-          child: Text(
-            note.body,
-            style: const TextStyle(fontSize: 16.0)
-          ),
-        )
-    );
+          child: _isEditing
+              ? TextField(
+                  controller: _controller,
+                  autofocus: true,
+                  maxLines: null,
+                  onTapOutside: (event) {
+                    _onSubmit(context, _controller.text);
+                  },
+                  style: const TextStyle(fontSize: 16.0),
+                )
+              : Text(
+                  widget.note.body,
+                  style: const TextStyle(fontSize: 16.0),
+                ),
+        ));
+  }
+
+  Future<void> _onSubmit(BuildContext context, newValue) async {
+    if (newValue.isNotEmpty) {
+      await Provider.of<NoteManager>(context, listen: false)
+          .editNote(widget.index, newValue);
+    }
+
+    setState(() {
+      _isEditing = false;
+    });
   }
 
   Future<void> _showEditDialog(BuildContext context, int index) async {
-    final NoteManager manager = Provider.of<NoteManager>(context, listen: false);
+    final NoteManager manager =
+        Provider.of<NoteManager>(context, listen: false);
     Note note = manager.getByIndex(index);
     String newBody = '';
 
@@ -135,7 +172,6 @@ class CardTest extends StatelessWidget {
 }
 
 class NoteCardLoading extends StatelessWidget {
-
   const NoteCardLoading({super.key});
 
   @override
@@ -152,5 +188,3 @@ class NoteCardLoading extends StatelessWidget {
     );
   }
 }
-
-
